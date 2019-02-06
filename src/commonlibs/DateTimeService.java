@@ -22,9 +22,9 @@ public class DateTimeService
    }
 
    //method returns date/time as a formatted String object
-   public String getDateAndTime()
+   public Date getDateAndTime()
    {
 	 Date d = this.calendar.getTime();
-     return "The Raspberry time is: " + d.toString();	
+     return d;
    }	
 }

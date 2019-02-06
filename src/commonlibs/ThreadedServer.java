@@ -13,6 +13,11 @@ public class ThreadedServer
 	private int portNumber = 5050;
 	boolean listening = false;
 	ServerSocket serverSocket;
+	private ThreadedConnectionHandler con;
+    
+	public void setInterval(int interval) {
+		this.con.setInterval(interval); 
+	}
 	
 	public ThreadedServer(int port) {
 		
@@ -21,7 +26,7 @@ public class ThreadedServer
         this.serverSocket = null;
 	}
 	
-	public void startListening() {
+	public void startListening(ServerCallbackObject callback) {
         
         // Set up the Server Socket
         try 
@@ -51,8 +56,8 @@ public class ThreadedServer
                 listening = false;   // end the loop - stop listening for further client requests
             }	
             
-            ThreadedConnectionHandler con = new ThreadedConnectionHandler(clientSocket);
-            con.start(); 
+            this.con = new ThreadedConnectionHandler(clientSocket, callback);
+            this.con.start(); 
             System.out.println("02. -- Finished communicating with client:" + clientSocket.getInetAddress().toString());
         }
         // Server is no longer listening for client connections - time to shut down.

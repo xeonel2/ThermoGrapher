@@ -7,18 +7,21 @@
 package commonlibs;
 
 import java.net.*;
+import java.util.Date;
 import java.io.*;
 
 public class Client {
 	
+	private String clientName;
 	private static int portNumber = 5050;
     private Socket socket = null;
     private ObjectOutputStream os = null;
     private ObjectInputStream is = null;
 
 	// the constructor expects the IP address of the server - the port is fixed
-    public Client(String serverIP, int serverPort) {
+    public Client(String serverIP, int serverPort, String clientName) {
     	portNumber = serverPort;
+    	this.clientName = clientName;
     	if (!connectToServer(serverIP)) {
     		System.out.println("XX. Failed to open socket connection to: " + serverIP);            
     	}
@@ -45,7 +48,7 @@ public class Client {
     public void getDate() {
     	String theDateCommand = "GetDate", theDateAndTime;
     	System.out.println("01. -> Sending Command (" + theDateCommand + ") to the server...");
-    	this.send(theDateCommand);
+//    	this.send(theDateCommand);
     	try{
     		theDateAndTime = (String) receive();
     		System.out.println("05. <- The Server responded with: ");
@@ -56,6 +59,27 @@ public class Client {
     	}
     	System.out.println("06. -- Disconnected from Server.");
     }
+    
+    public ServerToClientMessage sendReading(double reading,Date timeOfReading) {
+    	ClientToServerMessage csm = new ClientToServerMessage(this.clientName);
+    	ServerToClientMessage scm;
+    	csm.SetReading(reading, timeOfReading);
+    	this.send(csm);
+    	try{
+    		scm = (ServerToClientMessage) receive();
+    		System.out.println("05. <- The Server responded with: ");
+    		System.out.println("    <- " + scm.getTypeOfMessage() + " : " + scm.getSampleFrequency());
+    		return scm;
+    	}
+    	catch (Exception e){
+    		System.out.println("XX. There was an invalid object sent back from the server");
+    	}
+    	System.out.println("06. -- Disconnected from Server.");
+    	return null;
+    	
+    }
+    
+
 	
     // method to send a generic object.
     private void send(Object o) {
@@ -84,20 +108,4 @@ public class Client {
 		return o;
     }
 
-    public static void main(String args[]) 
-    {
-    	System.out.println("**. Java Client Application - EE402 OOP Module, DCU");
-    	if(args.length==2){
-    		
-    		Client theApp = new Client(args[0],Integer.parseInt(args[1]));
-		    theApp.getDate();
-		}
-    	else
-    	{
-    		System.out.println("Error: you must provide the address of the server and port");
-    		System.out.println("Usage is:  java Client x.x.x.x  (e.g. java Client 192.168.7.2)");
-    		System.out.println("      or:  java Client hostname (e.g. java Client localhost)");
-    	}    
-    	System.out.println("**. End of Application.");
-    }
 }

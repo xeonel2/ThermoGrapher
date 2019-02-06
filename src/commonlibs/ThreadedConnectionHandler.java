@@ -5,6 +5,7 @@
 package commonlibs;
 
 import java.net.*;
+import java.util.Date;
 import java.io.*;
 
 public class ThreadedConnectionHandler extends Thread
@@ -13,12 +14,20 @@ public class ThreadedConnectionHandler extends Thread
     private ObjectInputStream is = null;			// Input stream
     private ObjectOutputStream os = null;			// Output stream
     private DateTimeService theDateService;
+    private int interval = 10;
+    private ServerCallbackObject callback;
     
+	public void setInterval(int interval) {
+		this.interval = interval;
+	}
+
 	// The constructor for the connection handler
-    public ThreadedConnectionHandler(Socket clientSocket) {
+    public ThreadedConnectionHandler(Socket clientSocket, ServerCallbackObject callback) {
         this.clientSocket = clientSocket;
         //Set up a service object to get the current date and time
         theDateService = new DateTimeService();
+        this.callback = callback;
+        
     }
 
     // Will eventually be the thread execution method - can't pass the exception back
@@ -37,30 +46,36 @@ public class ThreadedConnectionHandler extends Thread
 
     // Receive and process incoming string commands from client socket 
     private boolean readCommand() {
-        String s = null;
+    	ClientToServerMessage s = null;
         try {
-            s = (String) is.readObject();
+            s = (ClientToServerMessage) is.readObject();
         } 
         catch (Exception e){    // catch a general exception
         	this.closeSocket();
             return false;
         }
-        System.out.println("01. <- Received a String object from the client (" + s + ").");
+        System.out.println("01. <- Received a String object from the client (" + s.getClientName() + ").");
         
         // At this point there is a valid String object
         // invoke the appropriate function based on the command 
-        if (s.equalsIgnoreCase("GetDate")){ 
-            this.getDate(); 
+        switch (s.getTypeOfMessage()) {
+        case "reading":
+            System.out.println(s.getTimeOfReading().toString() + " : " + s.getTemperature());
+            ServerToClientMessage scm = new ServerToClientMessage("setfreq", this.interval);
+            this.callback.noteReading(s.getTemperature(), s.getClientName());
+            this.send(scm);
+            break;
+            
+        default:
+        	this.sendError("Invalid command: " + s);
         }       
-        else { 
-            this.sendError("Invalid command: " + s); 
-        }
+
         return true;
     }
 
     // Use our custom DateTimeService Class to get the date and time
     private void getDate() {	// use the date service to get the date
-        String currentDateTimeText = theDateService.getDateAndTime();
+        Date currentDateTimeText = theDateService.getDateAndTime();
         this.send(currentDateTimeText);
     }
 
@@ -78,6 +93,7 @@ public class ThreadedConnectionHandler extends Thread
     
     // Send a pre-formatted error message to the client 
     public void sendError(String message) { 
+    	ServerToClientMessage scm = new ServerToClientMessage("errormessage", message);
         this.send("Error:" + message);	//remember a String IS-A Object!
     }
     
